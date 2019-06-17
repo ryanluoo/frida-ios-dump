@@ -39,7 +39,7 @@ file_dict = {}
 finished = threading.Event()
 
 
-def get_usb_iphone():
+def get_usb_iphone(uuid):
     Type = 'usb'
     if int(frida.__version__.split('.')[0]) < 12:
         Type = 'tether'
@@ -58,7 +58,13 @@ def get_usb_iphone():
             print('Waiting for USB device...')
             changed.wait()
         else:
-            device = devices[0]
+            if uuid is None:
+                device = devices[0]
+            else:
+                for d in devices:
+                    if d.id == uuid:
+                        device = d
+                        break
 
     device_manager.off('changed', on_changed)
 
@@ -251,6 +257,7 @@ def open_target_app(device, name_or_bundleid):
             pid = application.pid
             display_name = application.name
             bundle_identifier = application.identifier
+            break
 
     try:
         if not pid:
@@ -282,6 +289,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='frida-ios-dump (by AloneMonkey v2.0)')
     parser.add_argument('-l', '--list', dest='list_applications', action='store_true', help='List the installed apps')
     parser.add_argument('-o', '--output', dest='output_ipa', help='Specify name of the decrypted IPA')
+    parser.add_argument('-u', '--uuid', dest='uuid', help='Specify uuid of one jailbreak device')
     parser.add_argument('target', nargs='?', help='Bundle identifier or display name of the target app')
     args = parser.parse_args()
 
@@ -292,7 +300,8 @@ if __name__ == '__main__':
         parser.print_help()
         sys.exit(exit_code)
 
-    device = get_usb_iphone()
+    uuid = args.uuid
+    device = get_usb_iphone(uuid)
 
     if args.list_applications:
         list_applications(device)

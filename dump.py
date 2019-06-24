@@ -272,17 +272,22 @@ def open_target_app(device, name_or_bundleid):
     return session, display_name, bundle_identifier
 
 
-def start_dump(session, ipa_name):
+def start_dump(session, ipa_name, timeout=30):
     print('Dumping {} to {}'.format(display_name, TEMP_DIR))
 
     script = load_js_file(session, DUMP_JS)
     script.post('dump')
-    finished.wait()
+    finished.wait(timeout=timeout)
 
-    generate_ipa(PAYLOAD_PATH, ipa_name)
+    if finished.is_set():
+        generate_ipa(PAYLOAD_PATH, ipa_name)
+    else:
+        print("timeout")
 
     if session:
         session.detach()
+
+    return finished.is_set()
 
 
 if __name__ == '__main__':
@@ -321,6 +326,8 @@ if __name__ == '__main__':
             output_ipa = re.sub('\.ipa$', '', output_ipa)
             if session:
                 start_dump(session, output_ipa)
+            if not finished.is_set():
+                print('dump failed, timeout!')
         except paramiko.ssh_exception.NoValidConnectionsError as e:
             print(e) 
             exit_code = 1
